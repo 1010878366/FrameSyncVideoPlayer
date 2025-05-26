@@ -92,10 +92,117 @@ Player::Player(QWidget *parent)
     ui->nextButton->setIcon(style()->standardIcon(QStyle::SP_MediaSkipForward));
     ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
     //ui->playModeButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+
+    //更新播放模式图标
+    //updatePlayModeIcon();
+    connect(ui->playModeButton,&QPushButton::clicked,this,&Player::updatePlayModeIcon);
+
+    //静音切换操作
+    connect(ui->volumeButton,&QPushButton::clicked,this,&Player::toggleMute);
+    //通过键盘m按键实现静音切换功能
+    QShortcut *muteShrtcut=new QShortcut(Qt::Key_M,this);
+    connect(muteShrtcut,&QShortcut::activated,this,&Player::toggleMute);
+
+    //进度条相关
+    connect(mediaPlayer,&QMediaPlayer::positionChanged,this,&Player::updatePosition);
+    connect(mediaPlayer,&QMediaPlayer::durationChanged,this,&Player::updateDuration);
+    connect(ui->progressSlider,&QSlider::sliderMoved,this,&Player::setPosition);
+
+    //音量控制相关
 }
 
 Player::~Player()
 {
     delete ui;
 }
+
+void Player::updatePlayModeIcon()
+{
+    QIcon icon;
+    QString tooltip;
+    switch (playMode) {
+    case Sequential:
+        icon = QIcon(QStringLiteral("/icons/sequential.svg"));
+        tooltip="顺序播放";
+        break;
+    case Loop:
+        icon = QIcon(QStringLiteral("/icons/loop.svg"));
+        tooltip="列表循环";
+        break;
+    case SignleLoop:
+        icon = QIcon(QStringLiteral("/icons/signal-loop.svg"));
+        tooltip="单曲循环";
+        break;
+    case Random:
+        icon = QIcon(QStringLiteral("/icons/random.svg"));
+        tooltip="随机播放";
+        break;
+    default:
+        break;
+    }
+
+    //确保图标大小合适
+    QSize iconSize(24,24);
+    ui->playModeButton->setIconSize(iconSize);
+    ui->playModeButton->setIcon(icon);
+    ui->playModeButton->setToolTip(tooltip);
+}
+
+
+void Player::toggleMute()
+{
+    if(audioOutput->isMuted())
+    {
+        //取消静音
+        audioOutput->setMuted(false);
+        ui->volumeSlider->setValue(m_nLastVolumn);
+        ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
+    }
+    else
+    {
+        //静音操作
+        m_nLastVolumn=ui->volumeSlider->value();
+        audioOutput->setMuted(true);
+        ui->volumeSlider->setValue(0);
+        ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolumeMuted));
+    }
+}
+
+QString Player::formatTime(qint64 milliseconds)
+{
+    qint64 seconds=milliseconds/1000;
+    qint64 minutes=seconds/60;
+    seconds=seconds%60;
+
+    return QString("%1:%2")
+        .arg(minutes,2,10,QChar('0'))
+        .arg(seconds,2,10,QChar('0'));
+}
+
+void Player::updatePosition(qint64 position)   //进度条控制
+{
+    ui->progressSlider->setValue(position);
+    ui->currentTimeLabel->setText(formatTime(position));
+
+    //保存当前播放位置
+    if(!mediaPlayer->source().isEmpty())
+    {
+        lastPositions[mediaPlayer->source().toString()]=position;
+    }
+}
+
+void Player::updateDuration(qint64 duration)    //更新总时长
+{
+    ui->progressSlider->setRange(0,duration);
+    ui->totalTimeLabel->setText(formatTime(duration));
+}
+
+void Player::setPosition(int position)         //设置播放位置
+{
+    if(mediaPlayer->isSeekable())
+    {
+        mediaPlayer->setPosition(position);
+    }
+}
+
 
