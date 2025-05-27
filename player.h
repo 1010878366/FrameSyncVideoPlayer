@@ -40,8 +40,10 @@ public:
 private slots:
     void toggleMute();          //切换静音状态
     void updatePosition(qint64 position);   //进度条控制
-    void updateDuration(qint64 duration);    //更新总时长
+    void updateDuration(qint64 duration);   //更新总时长
     void setPosition(int position);         //设置播放位置
+    void setVolume(int volume);             //设置音量（0-100）
+    void updatePlayIcon(QMediaPlayer::PlaybackState state); //更新播放按钮图标
 
 private:
     Ui::Player *ui;
@@ -61,7 +63,7 @@ private:
     PlayMode playMode;          //当前播放模式
     void updatePlayModeIcon();  //切换播放模式图标
 
-    int m_nLastVolumn = 0;      //静音之前的音量缓存
+    int m_nLastVolume = 50;      //静音之前的音量缓存
     QString formatTime(qint64 milliseconds);    //格式化显示时间(mm:ss)
     QMap<QString,qint64> lastPositions;     //文件路径——最后播放位置映射
 

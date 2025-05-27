@@ -109,6 +109,10 @@ Player::Player(QWidget *parent)
     connect(ui->progressSlider,&QSlider::sliderMoved,this,&Player::setPosition);
 
     //音量控制相关
+    connect(ui->volumeSlider,&QSlider::valueChanged,this,&Player::setVolume);
+
+    //播放状态改变时
+    connect(mediaPlayer,&QMediaPlayer::playbackStateChanged,this,&Player::updatePlayIcon);
 }
 
 Player::~Player()
@@ -155,13 +159,13 @@ void Player::toggleMute()
     {
         //取消静音
         audioOutput->setMuted(false);
-        ui->volumeSlider->setValue(m_nLastVolumn);
+        ui->volumeSlider->setValue(m_nLastVolume);
         ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
     }
     else
     {
         //静音操作
-        m_nLastVolumn=ui->volumeSlider->value();
+        m_nLastVolume=ui->volumeSlider->value();
         audioOutput->setMuted(true);
         ui->volumeSlider->setValue(0);
         ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolumeMuted));
@@ -205,4 +209,62 @@ void Player::setPosition(int position)         //设置播放位置
     }
 }
 
+void Player::setVolume(int volume)
+{
+    audioOutput->setVolume(volume/100.0);
+    //更新音量图标
+    //Qt5存在但Qt6不存在QStyle::SP_MediaVolumeLow 和 QStyle::SP_MediaVolumeHigh，暂时没找到低中高音量的图标，到时候有了素材可以替换。
+    if(volume == 0)
+    {
+        ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolumeMuted));
+    }
+    else if(volume < 33)
+    {
+        ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
+        ui->volumeButton->setToolTip(QString("音量：%1").arg(volume));
+    }
+    else if(volume < 66)
+    {
+        ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
+        ui->volumeButton->setToolTip(QString("音量：%1").arg(volume));
+    }
+    else
+    {
+        ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
+        ui->volumeButton->setToolTip(QString("音量：%1").arg(volume));
+    }
 
+    //如果音量不为0 更新m_nLastVolume
+    if(volume > 0)
+    {
+        m_nLastVolume = volume;
+        audioOutput->setMuted(false);
+    }
+}
+
+void Player::updatePlayIcon(QMediaPlayer::PlaybackState state)
+{
+    QPushButton *button = ui->playButton;
+    switch(state)
+    {
+    case QMediaPlayer::PlayingState:
+    {
+        button->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+        button->setToolTip("暂停");
+        break;
+    }
+    case QMediaPlayer::PausedState:
+    {
+        button->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+        button->setToolTip("播放");
+        break;
+    }
+    case QMediaPlayer::StoppedState:
+    {
+        button->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+        button->setToolTip("暂停");
+        break;
+    }
+
+    }
+}

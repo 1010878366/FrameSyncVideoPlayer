@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     Player w;
 
     //配置主窗口属性
-    w.setWindowTitle("FrameSync视频播放器1.0.2");
+    w.setWindowTitle("FrameSync视频播放器1.0.3");
     w.setMinimumSize(800,600);
 
     w.show();
