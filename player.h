@@ -19,6 +19,8 @@
 #include<QMediaMetaData>
 #include<QDateTime>
 #include<QShortcut>
+#include<QDockWidget>
+#include<QShortcut>
 
 #include"ClickableSlider.h"
 
@@ -45,6 +47,9 @@ private slots:
     void setVolume(int volume);             //设置音量（0-100）
     void updatePlayIcon(QMediaPlayer::PlaybackState state); //更新播放按钮图标
 
+    void togglePlaylist();//切换播放列表可见性
+    void playlistItemDoubleClicked(QListWidgetItem *item);  //处理列表双击事件
+
 private:
     Ui::Player *ui;
 
@@ -66,6 +71,12 @@ private:
     int m_nLastVolume = 50;      //静音之前的音量缓存
     QString formatTime(qint64 milliseconds);    //格式化显示时间(mm:ss)
     QMap<QString,qint64> lastPositions;     //文件路径——最后播放位置映射
+
+    //播放列表组件
+    QDockWidget *m_playlistDock;      //播放列表停靠窗口
+    QListWidget *m_playlistWidget;    //播放列表内容控件
+
+
 
 };
 #endif // PLAYER_H

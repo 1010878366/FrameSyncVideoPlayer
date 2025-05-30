@@ -113,6 +113,73 @@ Player::Player(QWidget *parent)
 
     //播放状态改变时
     connect(mediaPlayer,&QMediaPlayer::playbackStateChanged,this,&Player::updatePlayIcon);
+
+    //创建视频播放列表
+    m_playlistDock = new QDockWidget(this);
+    m_playlistDock->setTitleBarWidget(new QWidget());
+    m_playlistWidget=new QListWidget(m_playlistDock);
+    m_playlistDock->setWidget(m_playlistWidget);
+    addDockWidget(Qt::RightDockWidgetArea,m_playlistDock);
+
+    //根据屏幕分辨率设置播放列表最小宽度
+    QScreen *screen=QGuiApplication::primaryScreen();
+    if(screen)
+    {
+        int screenWidth = screen->availableGeometry().width();
+        //设置为屏幕宽度的15%，但不小于200像素，不大于400像素
+        int minWidth = qBound(200,screenWidth/6,400);
+
+        m_playlistDock->setMinimumWidth(minWidth);
+    }
+
+    //设置播放列表样式
+    m_playlistWidget->setStyleSheet(R"(
+        QListWidget{
+            background-color: #2b2b2b;
+            border:none;
+        }
+
+        /*设置列表默认样式*/
+        QListWidget::itme{
+            color:#ffffff;  /*文字颜色为白色*/
+            padding:4px;    /*文字四周留4像素内边距*/
+            border-bottom:1px solid #3a3a3a;    /*底层添加浅灰色1像素分割线*/
+        }
+
+        /*设置被选中项的样式*/
+        QListWidget::itme:hover{
+            background-color:#323232;   /*浅灰色*/
+        }
+
+        /*设置鼠标悬停项的样式*/
+        QListWidget::itme:selected{
+            background-color:#3a3a3a;   /*灰色*/
+        }
+    )");
+
+    //创建播放列表切换按钮
+    ui->PlaylistButton->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+    ui->PlaylistButton->setFixedSize(32,32);
+    ui->PlaylistButton->setFocusPolicy(Qt::NoFocus);
+    ui->PlaylistButton->setToolTip("显示|隐藏播放列表");
+    ui->PlaylistButton->setStyleSheet(R"(
+        QPushButton{
+            border:none;
+            padding:1px;
+        }
+        QPushButton{
+            background-color:rgba(255,255,255,30);
+        }
+    )");
+
+    //将播放列表命令按钮添加到控制栏
+    connect(ui->PlaylistButton,&QPushButton::clicked,this,&Player::togglePlaylist);
+
+    //连接播放列表信号
+    connect(m_playlistWidget,&QListWidget::itemDoubleClicked,this,&Player::playlistItemDoubleClicked);
+
+
+
 }
 
 Player::~Player()
@@ -267,4 +334,17 @@ void Player::updatePlayIcon(QMediaPlayer::PlaybackState state)
     }
 
     }
+}
+
+void Player::togglePlaylist()
+{
+    m_playlistDock->setVisible(!m_playlistDock->isVisible());
+    ui->PlaylistButton->setIcon(style()->standardIcon(m_playlistDock->isVisible()?QStyle::SP_FileDialogDetailedView : QStyle::SP_FileDialogListView));
+}
+
+void Player::playlistItemDoubleClicked(QListWidgetItem *item)
+{
+    //播放视频文件方法
+
+
 }
