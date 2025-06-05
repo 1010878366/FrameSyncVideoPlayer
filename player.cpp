@@ -178,6 +178,11 @@ Player::Player(QWidget *parent)
     //连接播放列表信号
     connect(m_playlistWidget,&QListWidget::itemDoubleClicked,this,&Player::playlistItemDoubleClicked);
 
+    //初始化菜单指针
+    playbackRateMenu = nullptr;
+    rateGroup = nullptr;
+    //调用创建主菜单函数
+    createMenus();
 
 
 }
@@ -191,7 +196,7 @@ void Player::updatePlayModeIcon()
 {
     QIcon icon;
     QString tooltip;
-    switch (playMode) {
+    switch (m_playMode) {
     case Sequential:
         icon = QIcon(QStringLiteral("/icons/sequential.svg"));
         tooltip="顺序播放";
@@ -347,4 +352,159 @@ void Player::playlistItemDoubleClicked(QListWidgetItem *item)
     //播放视频文件方法
 
 
+}
+
+void Player::createMenus()
+{
+    //文件菜单
+    QMenu *fileMenmu=ui->menubar->addMenu("文件(&F)");
+    //打开文件
+    QAction *openAct = new QAction("打开(&O)");
+    openAct->setShortcut(QKeySequence::Open);   //绑定快捷键Ctrl+O
+    openAct->setStatusTip("打开视频媒体文件");
+    //槽函数连接 实现打开文件
+    connect(openAct,&QAction::triggered,this,&Player::openFile);
+
+    //添加到播放列表
+    QAction *addToPlaylistAct = new QAction("添加到播放列表(&A)",this);
+
+    //槽函数连接
+
+    //从播放列表移除
+    QAction *removeFromPlaylistAct = new QAction("从播放列表移除(&R)",this);
+
+    //槽函数连接
+
+
+
+    //将动作添加到文件菜单
+    fileMenmu->addAction(openAct);
+    fileMenmu->addAction(addToPlaylistAct);
+    fileMenmu->addAction(removeFromPlaylistAct);
+    fileMenmu->addSeparator();
+    //播放历史
+    QMenu *historyMenu = fileMenmu->addMenu("播放历史(&H)");
+    connect(historyMenu,&QMenu::aboutToShow,this,[this,historyMenu](){
+        historyMenu->clear();
+        if(playHistory.isEmpty())
+        {
+            QAction *emptyAct = historyMenu->addAction("暂无播放历史记录");
+            emptyAct->setEnabled(false);
+        }
+        else
+        {
+            //添加最近播放文件
+            for (const auto &history:playHistory)
+            {
+                QString timeStr=history.playTime.toString("yyyy-MM-dd hh::mm");
+                QString text=QString("%1(%2)").arg(history.fileName,timeStr);
+                QAction *action=historyMenu->addAction(text);
+                connect(action,&QAction::triggered,this,[this,history](){
+                    playFile(history.filePath);
+                    //恢复上次播放位置
+                    QTimer::singleShot(100,this,[this,history](){
+                        mediaPlayer->setPosition(history.lastPostion);
+                    });
+                });
+            }
+            historyMenu->addSeparator();
+            QAction *clearAct = historyMenu->addAction("清除历史记录");
+            connect(clearAct,&QAction::triggered,this,&Player::clearHistory);
+        }
+    });
+
+    //播放菜单
+
+    //帮助菜单
+
+}
+
+void Player::openFile()
+{
+    QStringList fileNames = QFileDialog::getOpenFileNames(this,"打开文件","","媒体文件(*.mp4 *.avi *.mkv *.txt);;所有文件(*.*)");
+
+    if(!fileNames.isEmpty())
+    {
+        //添加到播放列表
+        for(const QString &fileName:fileNames)
+        {
+            QListWidgetItem *item = new QListWidgetItem(QFileInfo(fileName).fileName());
+            item->setData(Qt::UserRole,fileName);
+            m_playlistWidget->addItem(item);
+        }
+        //自动保存到默认播放列表
+        saveDefautlPlaylist();
+
+        //播放第一个媒体文件
+        playFile(fileNames.first());
+
+        m_playlistWidget->setCurrentRow(m_playlistWidget->count()-fileNames.size());
+
+    }
+}
+
+void Player::playFile(const QString& filePath)
+{
+    if(!filePath.isEmpty())
+    {
+        mediaPlayer->setSource(QUrl::fromLocalFile(filePath));
+
+        //恢复上次播放位置
+        if(lastPositions.contains(filePath))
+        {
+            mediaPlayer->setPosition(lastPositions[filePath]);
+        }
+        mediaPlayer->play();
+
+        setWindowTitle("FrameSync视频播放器 - "+QFileInfo(filePath).fileName());
+
+        //当前播放项高亮显示
+        for(int i=0;i<m_playlistWidget->count();i++)
+        {
+            QListWidgetItem *item = m_playlistWidget->item(i);
+            if(item->data(Qt::UserRole).toString() == filePath)
+            {
+                m_playlistWidget->setCurrentItem(item);
+                break;
+            }
+        }
+
+        //添加到历史记录
+
+    }
+}
+
+void Player::saveDefautlPlaylist()
+{
+    QFile file(m_strDefaultPlaylsitFile);
+    if(file.open(QIODevice::WriteOnly|QIODevice::Text))
+    {
+        QTextStream out(&file);
+        for(int i = 0;i < m_playlistWidget->count();i++)
+        {
+            out<<m_playlistWidget->item(i)->data(Qt::UserRole).toString()<<"\n";
+        }
+    }
+
+}
+
+void Player::clearHistory()
+{
+    if(QMessageBox::question(this,"确认","是否要清除所有播放记录？")==QMessageBox::Yes)
+    {
+        playHistory.clear();
+        //保存播放历史记录
+        savePlayHistory();
+    }
+}
+
+void Player::savePlayHistory()
+{
+    QFile file(m_strHistoryFile);
+    if(file.open(QIODevice::WriteOnly))
+    {
+        QDataStream out(&file);
+        out.setVersion(QDataStream::Qt_6_0);
+        out<<qint32(playHistory.size());
+    }
 }

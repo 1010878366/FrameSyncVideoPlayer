@@ -21,6 +21,9 @@
 #include<QShortcut>
 #include<QDockWidget>
 #include<QShortcut>
+#include<QList>
+#include<QTimer>
+#include<QMessageBox>
 
 #include"ClickableSlider.h"
 
@@ -50,6 +53,9 @@ private slots:
     void togglePlaylist();//切换播放列表可见性
     void playlistItemDoubleClicked(QListWidgetItem *item);  //处理列表双击事件
 
+    void openFile();    //打开媒体文件
+
+
 private:
     Ui::Player *ui;
 
@@ -65,7 +71,7 @@ private:
         SignleLoop, //单曲循环
         Random      //随机播放
     };
-    PlayMode playMode;          //当前播放模式
+    PlayMode m_playMode;          //当前播放模式
     void updatePlayModeIcon();  //切换播放模式图标
 
     int m_nLastVolume = 50;      //静音之前的音量缓存
@@ -75,6 +81,27 @@ private:
     //播放列表组件
     QDockWidget *m_playlistDock;      //播放列表停靠窗口
     QListWidget *m_playlistWidget;    //播放列表内容控件
+
+    struct playHistory  //播放历史记录结构
+    {
+        QString filePath;       //文件完整路径
+        QString fileName;       //文件名称
+        QDateTime playTime;     //最后播放时间
+        qint64 duration;        //文件总时长
+        qint64 lastPostion;     //最后播放位置
+    };
+    QList<playHistory> playHistory; //播放历史记录列表
+
+    QString m_strDefaultPlaylsitFile; //默认播放列表文件
+    QMenu *playbackRateMenu;    //播放速度选择菜单
+    QActionGroup *rateGroup;    //播放速度动作组
+    QString m_strHistoryFile;   //历史记录存储路径
+
+    void createMenus();         //创建播放器主菜单
+    void playFile(const QString& filePath); //播放文件方法
+    void saveDefautlPlaylist();     //保存当前播放列表
+    void clearHistory();        //清空播放历史
+    void savePlayHistory();   //保存历史记录
 
 
 
