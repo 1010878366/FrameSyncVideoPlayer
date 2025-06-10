@@ -55,6 +55,9 @@ private slots:
 
     void openFile();    //打开媒体文件
 
+    void addToPlaylist();   //添加文件到播放列表
+    void removeFromPlaylist();  //从播放列表移除
+
 
 private:
     Ui::Player *ui;
@@ -82,7 +85,7 @@ private:
     QDockWidget *m_playlistDock;      //播放列表停靠窗口
     QListWidget *m_playlistWidget;    //播放列表内容控件
 
-    struct playHistory  //播放历史记录结构
+    struct PlayHistory  //播放历史记录结构
     {
         QString filePath;       //文件完整路径
         QString fileName;       //文件名称
@@ -90,7 +93,7 @@ private:
         qint64 duration;        //文件总时长
         qint64 lastPostion;     //最后播放位置
     };
-    QList<playHistory> playHistory; //播放历史记录列表
+    QList<PlayHistory> playHistory; //播放历史记录列表
 
     QString m_strDefaultPlaylsitFile; //默认播放列表文件
     QMenu *playbackRateMenu;    //播放速度选择菜单
@@ -99,11 +102,12 @@ private:
 
     void createMenus();         //创建播放器主菜单
     void playFile(const QString& filePath); //播放文件方法
-    void saveDefautlPlaylist();     //保存当前播放列表
+    void saveDefaultPlaylist();     //保存当前播放列表
     void clearHistory();        //清空播放历史
     void savePlayHistory();   //保存历史记录
 
-
+    void addToHistory(const QString &filePath); //添加到播放记录
+    QString currentPlaylistFile;    //当前加载的播放列表文件
 
 };
 #endif // PLAYER_H

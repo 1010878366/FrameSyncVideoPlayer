@@ -433,7 +433,7 @@ void Player::openFile()
             m_playlistWidget->addItem(item);
         }
         //自动保存到默认播放列表
-        saveDefautlPlaylist();
+        saveDefaultPlaylist();
 
         //播放第一个媒体文件
         playFile(fileNames.first());
@@ -470,11 +470,11 @@ void Player::playFile(const QString& filePath)
         }
 
         //添加到历史记录
-
+        addToHistory();
     }
 }
 
-void Player::saveDefautlPlaylist()
+void Player::saveDefaultPlaylist()
 {
     QFile file(m_strDefaultPlaylsitFile);
     if(file.open(QIODevice::WriteOnly|QIODevice::Text))
@@ -508,3 +508,58 @@ void Player::savePlayHistory()
         out<<qint32(playHistory.size());
     }
 }
+
+void Player::addToHistory(const QString &filePath)
+{
+    //检查是否已经存在
+    auto it= std::find_if(playHistory.begin(),playHistory.end(),
+                           [&filePath](const PlayHistory &h)
+                            {return h.filePath == filePath;});
+
+    PlayHistory history;
+    history.filePath=filePath;
+    history.fileName=QFileInfo(filePath).fileName();
+    history.playTime=QDateTime::currentDateTime();
+    history.duration=mediaPlayer->duration();
+    history.lastPostion=mediaPlayer->position();
+
+    if(it != PlayHistory.end())
+    {
+        //更新现有记录
+        *it=history;
+    }
+    else
+    {
+        //添加新记录
+        playHistory.prepend(history);
+
+        //限制历史记录数量
+        while (playHistory.size()>30) {
+            playHistory.removeLast();
+        }
+    }
+
+    //调用保存历史记录
+    savePlayHistory();
+}
+
+void Player::addToPlaylist()
+{
+    QString fileName = QFileDialog::getSaveFileName(this,"保存播放列表","播放列表(**.m3u)");
+    QFile file(fileName);
+    if(file.open(QIODevice::WriteOnly|QIODevice::Text))
+    {
+        QTextStream out(&file);
+        for(int i = 0;i<m_playlistWidget->count();i++)
+        {
+            out << m_playlistWidget->item(i)->data(Qt::UserRole).toString();
+        }
+        currentPlaylistFile=fileName;
+    }
+}
+
+void Player::removeFromPlaylist()
+{
+
+}
+
