@@ -140,7 +140,7 @@ Player::Player(QWidget *parent)
         }
 
         /*设置列表默认样式*/
-        QListWidget::itme{
+        QListWidget::item{
             color:#ffffff;  /*文字颜色为白色*/
             padding:4px;    /*文字四周留4像素内边距*/
             border-bottom:1px solid #3a3a3a;    /*底层添加浅灰色1像素分割线*/
@@ -175,15 +175,24 @@ Player::Player(QWidget *parent)
     //将播放列表命令按钮添加到控制栏
     connect(ui->PlaylistButton,&QPushButton::clicked,this,&Player::togglePlaylist);
 
-    //连接播放列表信号
+    //连接播放列表信号 - 双击实现播放功能
     connect(m_playlistWidget,&QListWidget::itemDoubleClicked,this,&Player::playlistItemDoubleClicked);
 
     //初始化菜单指针
-    playbackRateMenu = nullptr;
-    rateGroup = nullptr;
+    m_playbackRateMenu = nullptr;
+    m_rateGroup = nullptr;
     //调用创建主菜单函数
     createMenus();
 
+    //设置默认播放列表路径
+    QDir appDataDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+    if(!appDataDir.exists())
+        appDataDir.mkpath(".");
+
+    m_strDefaultPlaylistFile = appDataDir.filePath("default.m3u");
+
+    //添加默认播放列表
+    loadDefaultPlaylist();
 
 }
 
@@ -349,8 +358,8 @@ void Player::togglePlaylist()
 
 void Player::playlistItemDoubleClicked(QListWidgetItem *item)
 {
-    //播放视频文件方法
-
+    //播放视频文件方法 双击播放
+    playFile(item->data(Qt::UserRole).toString());
 
 }
 
@@ -367,15 +376,13 @@ void Player::createMenus()
 
     //添加到播放列表
     QAction *addToPlaylistAct = new QAction("添加到播放列表(&A)",this);
-
     //槽函数连接
+    connect(addToPlaylistAct,&QAction::triggered,this,&Player::addToPlaylist);
 
     //从播放列表移除
     QAction *removeFromPlaylistAct = new QAction("从播放列表移除(&R)",this);
-
     //槽函数连接
-
-
+    connect(removeFromPlaylistAct,&QAction::triggered,this,&Player::removeFromPlaylist);
 
     //将动作添加到文件菜单
     fileMenmu->addAction(openAct);
@@ -428,7 +435,7 @@ void Player::openFile()
         //添加到播放列表
         for(const QString &fileName:fileNames)
         {
-            QListWidgetItem *item = new QListWidgetItem(QFileInfo(fileName).fileName());
+            QListWidgetItem *item=new QListWidgetItem(QFileInfo(fileName).fileName());
             item->setData(Qt::UserRole,fileName);
             m_playlistWidget->addItem(item);
         }
@@ -470,13 +477,13 @@ void Player::playFile(const QString& filePath)
         }
 
         //添加到历史记录
-        addToHistory();
+        addToHistory(filePath);
     }
 }
 
 void Player::saveDefaultPlaylist()
 {
-    QFile file(m_strDefaultPlaylsitFile);
+    QFile file(m_strDefaultPlaylistFile);
     if(file.open(QIODevice::WriteOnly|QIODevice::Text))
     {
         QTextStream out(&file);
@@ -485,7 +492,6 @@ void Player::saveDefaultPlaylist()
             out<<m_playlistWidget->item(i)->data(Qt::UserRole).toString()<<"\n";
         }
     }
-
 }
 
 void Player::clearHistory()
@@ -523,7 +529,7 @@ void Player::addToHistory(const QString &filePath)
     history.duration=mediaPlayer->duration();
     history.lastPostion=mediaPlayer->position();
 
-    if(it != PlayHistory.end())
+    if(it != playHistory.end())
     {
         //更新现有记录
         *it=history;
@@ -545,21 +551,53 @@ void Player::addToHistory(const QString &filePath)
 
 void Player::addToPlaylist()
 {
-    QString fileName = QFileDialog::getSaveFileName(this,"保存播放列表","播放列表(**.m3u)");
-    QFile file(fileName);
-    if(file.open(QIODevice::WriteOnly|QIODevice::Text))
+    QString fileName = QFileDialog::getSaveFileName(this,"保存播放列表","","播放列表(*.m3u)");
+    if(!fileName.isEmpty())
     {
-        QTextStream out(&file);
-        for(int i = 0;i<m_playlistWidget->count();i++)
+        QFile file(fileName);
+
+        if(file.open(QIODevice::WriteOnly|QIODevice::Text))
         {
-            out << m_playlistWidget->item(i)->data(Qt::UserRole).toString();
+            QTextStream out(&file);
+            for(int i=0;i<m_playlistWidget->count();i++)
+            {
+                out << m_playlistWidget->item(i)->data(Qt::UserRole).toString()<<"\n";
+            }
+            currentPlaylistFile = fileName;
         }
-        currentPlaylistFile=fileName;
     }
 }
 
 void Player::removeFromPlaylist()
 {
+    QList<QListWidgetItem*> items = m_playlistWidget->selectedItems();
+    for(QListWidgetItem* item:items)
+    {
+        delete m_playlistWidget->takeItem(m_playlistWidget->row(item));
+    }
+
+    //自动保存到默认播放列表
+    saveDefaultPlaylist();
 
 }
 
+void Player::loadDefaultPlaylist()
+{
+    QFile file(m_strDefaultPlaylistFile);
+
+    if(file.open(QIODevice::ReadOnly|QIODevice::Text))
+    {
+        m_playlistWidget->clear();
+        QTextStream in(&file);
+        while(!in.atEnd())
+        {
+            QString filePath = in.readLine().trimmed();
+            if(!filePath.isEmpty() && QFile::exists(filePath))
+            {
+                QListWidgetItem *item = new QListWidgetItem(QFileInfo(filePath).fileName());
+                item->setData(Qt::UserRole,filePath);
+                m_playlistWidget->addItem(item);
+            }
+        }
+    }
+}

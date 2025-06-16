@@ -95,10 +95,10 @@ private:
     };
     QList<PlayHistory> playHistory; //播放历史记录列表
 
-    QString m_strDefaultPlaylsitFile; //默认播放列表文件
-    QMenu *playbackRateMenu;    //播放速度选择菜单
-    QActionGroup *rateGroup;    //播放速度动作组
-    QString m_strHistoryFile;   //历史记录存储路径
+    QMenu *m_playbackRateMenu;        //播放速度选择菜单
+    QActionGroup *m_rateGroup;        //播放速度动作组
+    QString m_strDefaultPlaylistFile;    //默认播放列表文件路径
+    QString m_strHistoryFile;       //历史记录存储路径
 
     void createMenus();         //创建播放器主菜单
     void playFile(const QString& filePath); //播放文件方法
@@ -108,6 +108,7 @@ private:
 
     void addToHistory(const QString &filePath); //添加到播放记录
     QString currentPlaylistFile;    //当前加载的播放列表文件
+    void loadDefaultPlaylist();     //加载默认播放列表
 
 };
 #endif // PLAYER_H
