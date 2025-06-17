@@ -50,14 +50,15 @@ private slots:
     void setVolume(int volume);             //设置音量（0-100）
     void updatePlayIcon(QMediaPlayer::PlaybackState state); //更新播放按钮图标
 
-    void togglePlaylist();//切换播放列表可见性
+    void togglePlaylist();      //切换播放列表可见性
     void playlistItemDoubleClicked(QListWidgetItem *item);  //处理列表双击事件
 
-    void openFile();    //打开媒体文件
+    void openFile();            //打开媒体文件
 
-    void addToPlaylist();   //添加文件到播放列表
+    void addToPlaylist();       //添加文件到播放列表
     void removeFromPlaylist();  //从播放列表移除
 
+    void openStreamUrl();       //打开网络流媒体URL
 
 private:
     Ui::Player *ui;
@@ -109,6 +110,12 @@ private:
     void addToHistory(const QString &filePath); //添加到播放记录
     QString currentPlaylistFile;    //当前加载的播放列表文件
     void loadDefaultPlaylist();     //加载默认播放列表
+
+    void saveStreamHistory();       //保存流媒体历史记录
+    QList<QString> recentStreams;   //最近播放的流媒体
+    QString streamHistoryFile;      //流媒体历史记录文件路径
+
+
 
 };
 #endif // PLAYER_H

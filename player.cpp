@@ -366,7 +366,7 @@ void Player::playlistItemDoubleClicked(QListWidgetItem *item)
 void Player::createMenus()
 {
     //文件菜单
-    QMenu *fileMenmu=ui->menubar->addMenu("文件(&F)");
+    QMenu *fileMenu=ui->menubar->addMenu("文件(&F)");
     //打开文件
     QAction *openAct = new QAction("打开(&O)");
     openAct->setShortcut(QKeySequence::Open);   //绑定快捷键Ctrl+O
@@ -385,12 +385,12 @@ void Player::createMenus()
     connect(removeFromPlaylistAct,&QAction::triggered,this,&Player::removeFromPlaylist);
 
     //将动作添加到文件菜单
-    fileMenmu->addAction(openAct);
-    fileMenmu->addAction(addToPlaylistAct);
-    fileMenmu->addAction(removeFromPlaylistAct);
-    fileMenmu->addSeparator();
+    fileMenu->addAction(openAct);
+    fileMenu->addAction(addToPlaylistAct);
+    fileMenu->addAction(removeFromPlaylistAct);
+    fileMenu->addSeparator();
     //播放历史
-    QMenu *historyMenu = fileMenmu->addMenu("播放历史(&H)");
+    QMenu *historyMenu = fileMenu->addMenu("播放历史(&H)");
     connect(historyMenu,&QMenu::aboutToShow,this,[this,historyMenu](){
         historyMenu->clear();
         if(playHistory.isEmpty())
@@ -419,6 +419,23 @@ void Player::createMenus()
             connect(clearAct,&QAction::triggered,this,&Player::clearHistory);
         }
     });
+
+    QMenu *streamMenu = fileMenu->addMenu("网络流(&N)");
+    QAction *openStreamAct = new QAction("打开网络流(&O)",this);
+
+    //打开网络流槽函数
+    connect(openStreamAct,&QAction::triggered,this,&Player::openStreamUrl);
+
+    //添加最近播放的流媒体子菜单
+    QMenu *recentStreamsMenu = streamMenu->addMenu("最近播放(&R)");
+    //connect(recentStreamsMenu,&QMenu::aboutToShow,this,[]);
+
+
+
+
+
+
+    streamMenu->addAction(openStreamAct);
 
     //播放菜单
 
@@ -600,4 +617,16 @@ void Player::loadDefaultPlaylist()
             }
         }
     }
+}
+
+void Player::openStreamUrl()
+{
+
+
+}
+
+void Player::saveStreamHistory()
+{
+
+
 }
