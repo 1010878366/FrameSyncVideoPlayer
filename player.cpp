@@ -194,6 +194,29 @@ Player::Player(QWidget *parent)
     //添加默认播放列表
     loadDefaultPlaylist();
 
+    //添加媒体状态变化处理操作
+    connect(mediaPlayer,&QMediaPlayer::mediaStatusChanged,this,[this](QMediaPlayer::MediaStatus status){
+        switch (status) {
+        case QMediaPlayer::LoadedMedia:
+            //媒体加载完成后，可以开始操作
+            ui->playButton->setEnabled(true);
+            break;
+        case QMediaPlayer::InvalidMedia:
+            //无效媒体
+            QMessageBox::warning(this,"错误","无效的媒体文件！");
+            break;
+
+        default:
+            break;
+        }
+    });
+
+    //设置流媒体历史记录文件路径
+    m_strStreamHistoryFile=appDataDir.filePath("streams.dat");
+
+    //加载流媒体历史记录
+    loadStreamHistory();
+
 }
 
 Player::~Player()
@@ -272,7 +295,7 @@ void Player::updatePosition(qint64 position)   //进度条控制
     //保存当前播放位置
     if(!mediaPlayer->source().isEmpty())
     {
-        lastPositions[mediaPlayer->source().toString()]=position;
+        m_lastPositions[mediaPlayer->source().toString()]=position;
     }
 }
 
@@ -421,21 +444,34 @@ void Player::createMenus()
     });
 
     QMenu *streamMenu = fileMenu->addMenu("网络流(&N)");
-    QAction *openStreamAct = new QAction("打开网络流(&O)",this);
+    //添加网络流并打开
+    streamMenu->addAction("打开网络流(&O)",this,&Player::openStreamUrl);
 
-    //打开网络流槽函数
-    connect(openStreamAct,&QAction::triggered,this,&Player::openStreamUrl);
-
-    //添加最近播放的流媒体子菜单
+    //添加 最近播放 流媒体子菜单
     QMenu *recentStreamsMenu = streamMenu->addMenu("最近播放(&R)");
-    //connect(recentStreamsMenu,&QMenu::aboutToShow,this,[]);
+    connect(recentStreamsMenu,&QMenu::aboutToShow,this,[=](){
+        recentStreamsMenu->clear();
+        for(const QString &url:m_recentStreams){
+            recentStreamsMenu->addAction(url,[=](){
+                mediaPlayer->setSource(QUrl(url));
+                mediaPlayer->play();
+            });
+        }
 
+        if(!m_recentStreams.isEmpty())
+        {
+            recentStreamsMenu->addSeparator();
+            QAction *clearAct = recentStreamsMenu->addAction("清除历史记录");
+            connect(clearAct,&QAction::triggered,this,[this](){
+                m_recentStreams.clear();
+                saveStreamHistory();
+            });
+        }
+    });
 
+    streamMenu->addSeparator();
+    streamMenu->addMenu(recentStreamsMenu);
 
-
-
-
-    streamMenu->addAction(openStreamAct);
 
     //播放菜单
 
@@ -474,9 +510,9 @@ void Player::playFile(const QString& filePath)
         mediaPlayer->setSource(QUrl::fromLocalFile(filePath));
 
         //恢复上次播放位置
-        if(lastPositions.contains(filePath))
+        if(m_lastPositions.contains(filePath))
         {
-            mediaPlayer->setPosition(lastPositions[filePath]);
+            mediaPlayer->setPosition(m_lastPositions[filePath]);
         }
         mediaPlayer->play();
 
@@ -580,7 +616,7 @@ void Player::addToPlaylist()
             {
                 out << m_playlistWidget->item(i)->data(Qt::UserRole).toString()<<"\n";
             }
-            currentPlaylistFile = fileName;
+            m_strCurrentPlaylistFile = fileName;
         }
     }
 }
@@ -621,12 +657,60 @@ void Player::loadDefaultPlaylist()
 
 void Player::openStreamUrl()
 {
+    bool bOK;
+    QString url = QInputDialog::getText(this,"打开网络流","请输入流媒体：",QLineEdit::Normal,"http://",&bOK);
 
+    if(bOK && !url.isEmpty())
+    {
+        //验证URL格式
+        QUrl streamUrl(url);
+        if(!streamUrl.isValid())
+        {
+            QMessageBox::warning(this,"错误","无效的URL！");
+            return;
+        }
 
+        //添加到播放列表
+        if(!m_recentStreams.contains(url))
+        {
+            m_recentStreams.prepend(url);
+
+            //限制最近播放列表大小
+            while (m_recentStreams.size()>10)
+            {
+                m_recentStreams.removeLast();
+            }
+            saveStreamHistory();    //保存流媒体历史记录
+        }
+
+        //播放流媒体
+        mediaPlayer->setSource(QUrl(url));
+        mediaPlayer->play();
+
+        //更新播放器界面
+        setWindowTitle("FrameSync视频播放器 - " + url);
+    }
 }
 
 void Player::saveStreamHistory()
 {
+    QFile file(m_strStreamHistoryFile);
 
+    if(file.open(QIODevice::WriteOnly))
+    {
+        QDataStream out(&file);
+        out.setVersion(QDataStream::Qt_6_0);
+        out << m_recentStreams;
+    }
+}
 
+void Player::loadStreamHistory()
+{
+    QFile file(m_strStreamHistoryFile);
+    if(file.open(QIODevice::ReadOnly))
+    {
+        QDataStream in(&file);
+        in.setVersion(QDataStream::Qt_6_0);
+        in >> m_recentStreams;
+    }
 }

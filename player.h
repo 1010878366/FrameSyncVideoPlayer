@@ -23,6 +23,7 @@
 #include<QShortcut>
 #include<QList>
 #include<QTimer>
+#include<QInputDialog>
 #include<QMessageBox>
 
 #include"ClickableSlider.h"
@@ -49,15 +50,11 @@ private slots:
     void setPosition(int position);         //设置播放位置
     void setVolume(int volume);             //设置音量（0-100）
     void updatePlayIcon(QMediaPlayer::PlaybackState state); //更新播放按钮图标
-
     void togglePlaylist();      //切换播放列表可见性
     void playlistItemDoubleClicked(QListWidgetItem *item);  //处理列表双击事件
-
     void openFile();            //打开媒体文件
-
     void addToPlaylist();       //添加文件到播放列表
     void removeFromPlaylist();  //从播放列表移除
-
     void openStreamUrl();       //打开网络流媒体URL
 
 private:
@@ -80,7 +77,7 @@ private:
 
     int m_nLastVolume = 50;      //静音之前的音量缓存
     QString formatTime(qint64 milliseconds);    //格式化显示时间(mm:ss)
-    QMap<QString,qint64> lastPositions;     //文件路径——最后播放位置映射
+    QMap<QString,qint64> m_lastPositions;     //文件路径——最后播放位置映射
 
     //播放列表组件
     QDockWidget *m_playlistDock;      //播放列表停靠窗口
@@ -108,12 +105,13 @@ private:
     void savePlayHistory();   //保存历史记录
 
     void addToHistory(const QString &filePath); //添加到播放记录
-    QString currentPlaylistFile;    //当前加载的播放列表文件
+    QString m_strCurrentPlaylistFile;    //当前加载的播放列表文件
     void loadDefaultPlaylist();     //加载默认播放列表
 
     void saveStreamHistory();       //保存流媒体历史记录
-    QList<QString> recentStreams;   //最近播放的流媒体
-    QString streamHistoryFile;      //流媒体历史记录文件路径
+    QList<QString> m_recentStreams;   //最近播放的流媒体
+    QString m_strStreamHistoryFile;      //流媒体历史记录文件路径
+    void loadStreamHistory();       //加载流媒体播放历史记录
 
 
 
