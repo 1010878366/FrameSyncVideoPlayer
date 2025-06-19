@@ -57,13 +57,14 @@ private slots:
     void removeFromPlaylist();  //从播放列表移除
     void openStreamUrl();       //打开网络流媒体URL
 
+
 private:
     Ui::Player *ui;
 
     //1.多媒体组件
-    QVideoWidget *videoWidget;  //视频显示组件
-    QMediaPlayer *mediaPlayer;  //媒体播放器核心
-    QAudioOutput *audioOutput;  //音频输出设备
+    QVideoWidget *m_videoWidget;  //视频显示组件
+    QMediaPlayer *m_mediaPlayer;  //媒体播放器核心
+    QAudioOutput *m_audioOutput;  //音频输出设备
 
     //
     enum PlayMode{  //播放模式枚举
@@ -91,28 +92,29 @@ private:
         qint64 duration;        //文件总时长
         qint64 lastPostion;     //最后播放位置
     };
-    QList<PlayHistory> playHistory; //播放历史记录列表
+    QList<PlayHistory> m_playHistory;   //播放历史记录列表
 
-    QMenu *m_playbackRateMenu;        //播放速度选择菜单
-    QActionGroup *m_rateGroup;        //播放速度动作组
-    QString m_strDefaultPlaylistFile;    //默认播放列表文件路径
-    QString m_strHistoryFile;       //历史记录存储路径
+    QMenu *m_playbackRateMenu;          //播放速度选择菜单
+    QActionGroup *m_rateGroup;          //播放速度动作组
+    QString m_strDefaultPlaylistFile;   //默认播放列表文件路径
+    QString m_strHistoryFile;           //历史记录存储路径
 
-    void createMenus();         //创建播放器主菜单
+    void createMenus();             //创建播放器主菜单
     void playFile(const QString& filePath); //播放文件方法
     void saveDefaultPlaylist();     //保存当前播放列表
-    void clearHistory();        //清空播放历史
-    void savePlayHistory();   //保存历史记录
+    void clearHistory();            //清空播放历史
+    void savePlayHistory();         //保存历史记录
 
     void addToHistory(const QString &filePath); //添加到播放记录
-    QString m_strCurrentPlaylistFile;    //当前加载的播放列表文件
-    void loadDefaultPlaylist();     //加载默认播放列表
+    QString m_strCurrentPlaylistFile;   //当前加载的播放列表文件
+    void loadDefaultPlaylist();         //加载默认播放列表
 
-    void saveStreamHistory();       //保存流媒体历史记录
-    QList<QString> m_recentStreams;   //最近播放的流媒体
-    QString m_strStreamHistoryFile;      //流媒体历史记录文件路径
-    void loadStreamHistory();       //加载流媒体播放历史记录
-
+    void saveStreamHistory();           //保存流媒体历史记录
+    QList<QString> m_recentStreams;     //最近播放的流媒体
+    QString m_strStreamHistoryFile;     //流媒体历史记录文件路径
+    void loadStreamHistory();           //加载流媒体播放历史记录
+    void createPlaybackRateMenu(double rate);      //播放速度控制
+    void setPlayMode(PlayMode mode);    //设置播放模式
 
 
 };

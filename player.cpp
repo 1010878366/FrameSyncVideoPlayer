@@ -52,8 +52,6 @@ QString styleSheetSlider=R"(
     }
 )";
 
-
-
 Player::Player(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::Player)
@@ -64,17 +62,17 @@ Player::Player(QWidget *parent)
     setWindowIcon(QIcon(":/icons/player.svg"));
 
     //初始化视频显示组件
-    videoWidget = new QVideoWidget(this);   //创建视频显示组件
-    ui->videoLayout->addWidget(videoWidget);    //添加到主界面布局
+    m_videoWidget = new QVideoWidget(this);   //创建视频显示组件
+    ui->videoLayout->addWidget(m_videoWidget);    //添加到主界面布局
 
     //初始化媒体播放系统
-    mediaPlayer = new QMediaPlayer(this);   //媒体播放器核心
-    audioOutput = new QAudioOutput(this);   //音频输出设备
-    mediaPlayer->setAudioOutput(audioOutput);   //绑定视频输出
-    mediaPlayer->setVideoOutput(videoWidget);   //绑定音频输出
+    m_mediaPlayer = new QMediaPlayer(this);   //媒体播放器核心
+    m_audioOutput = new QAudioOutput(this);   //音频输出设备
+    m_mediaPlayer->setAudioOutput(m_audioOutput);   //绑定视频输出
+    m_mediaPlayer->setVideoOutput(m_videoWidget);   //绑定音频输出
 
     //初始化音频设置（0到100）
-    audioOutput->setVolume(ui->volumeSlider->value()/100.0);
+    m_audioOutput->setVolume(ui->volumeSlider->value()/100.0);
 
     //应用自定义滑动条样式
      ui->progressSlider->setStyleSheet(styleSheetSlider);    //播放进度条
@@ -104,15 +102,15 @@ Player::Player(QWidget *parent)
     connect(muteShrtcut,&QShortcut::activated,this,&Player::toggleMute);
 
     //进度条相关
-    connect(mediaPlayer,&QMediaPlayer::positionChanged,this,&Player::updatePosition);
-    connect(mediaPlayer,&QMediaPlayer::durationChanged,this,&Player::updateDuration);
+    connect(m_mediaPlayer,&QMediaPlayer::positionChanged,this,&Player::updatePosition);
+    connect(m_mediaPlayer,&QMediaPlayer::durationChanged,this,&Player::updateDuration);
     connect(ui->progressSlider,&QSlider::sliderMoved,this,&Player::setPosition);
 
     //音量控制相关
     connect(ui->volumeSlider,&QSlider::valueChanged,this,&Player::setVolume);
 
     //播放状态改变时
-    connect(mediaPlayer,&QMediaPlayer::playbackStateChanged,this,&Player::updatePlayIcon);
+    connect(m_mediaPlayer,&QMediaPlayer::playbackStateChanged,this,&Player::updatePlayIcon);
 
     //创建视频播放列表
     m_playlistDock = new QDockWidget(this);
@@ -195,7 +193,7 @@ Player::Player(QWidget *parent)
     loadDefaultPlaylist();
 
     //添加媒体状态变化处理操作
-    connect(mediaPlayer,&QMediaPlayer::mediaStatusChanged,this,[this](QMediaPlayer::MediaStatus status){
+    connect(m_mediaPlayer,&QMediaPlayer::mediaStatusChanged,this,[this](QMediaPlayer::MediaStatus status){
         switch (status) {
         case QMediaPlayer::LoadedMedia:
             //媒体加载完成后，可以开始操作
@@ -259,10 +257,10 @@ void Player::updatePlayModeIcon()
 
 void Player::toggleMute()
 {
-    if(audioOutput->isMuted())
+    if(m_audioOutput->isMuted())
     {
         //取消静音
-        audioOutput->setMuted(false);
+        m_audioOutput->setMuted(false);
         ui->volumeSlider->setValue(m_nLastVolume);
         ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
     }
@@ -270,7 +268,7 @@ void Player::toggleMute()
     {
         //静音操作
         m_nLastVolume=ui->volumeSlider->value();
-        audioOutput->setMuted(true);
+        m_audioOutput->setMuted(true);
         ui->volumeSlider->setValue(0);
         ui->volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolumeMuted));
     }
@@ -293,9 +291,9 @@ void Player::updatePosition(qint64 position)   //进度条控制
     ui->currentTimeLabel->setText(formatTime(position));
 
     //保存当前播放位置
-    if(!mediaPlayer->source().isEmpty())
+    if(!m_mediaPlayer->source().isEmpty())
     {
-        m_lastPositions[mediaPlayer->source().toString()]=position;
+        m_lastPositions[m_mediaPlayer->source().toString()]=position;
     }
 }
 
@@ -307,15 +305,15 @@ void Player::updateDuration(qint64 duration)    //更新总时长
 
 void Player::setPosition(int position)         //设置播放位置
 {
-    if(mediaPlayer->isSeekable())
+    if(m_mediaPlayer->isSeekable())
     {
-        mediaPlayer->setPosition(position);
+        m_mediaPlayer->setPosition(position);
     }
 }
 
 void Player::setVolume(int volume)
 {
-    audioOutput->setVolume(volume/100.0);
+    m_audioOutput->setVolume(volume/100.0);
     //更新音量图标
     //Qt5存在但Qt6不存在QStyle::SP_MediaVolumeLow 和 QStyle::SP_MediaVolumeHigh，暂时没找到低中高音量的图标，到时候有了素材可以替换。
     if(volume == 0)
@@ -342,7 +340,7 @@ void Player::setVolume(int volume)
     if(volume > 0)
     {
         m_nLastVolume = volume;
-        audioOutput->setMuted(false);
+        m_audioOutput->setMuted(false);
     }
 }
 
@@ -369,6 +367,8 @@ void Player::updatePlayIcon(QMediaPlayer::PlaybackState state)
         button->setToolTip("暂停");
         break;
     }
+    default:
+        break;
 
     }
 }
@@ -388,7 +388,7 @@ void Player::playlistItemDoubleClicked(QListWidgetItem *item)
 
 void Player::createMenus()
 {
-    //文件菜单
+    //一、文件菜单
     QMenu *fileMenu=ui->menubar->addMenu("文件(&F)");
     //打开文件
     QAction *openAct = new QAction("打开(&O)");
@@ -416,7 +416,7 @@ void Player::createMenus()
     QMenu *historyMenu = fileMenu->addMenu("播放历史(&H)");
     connect(historyMenu,&QMenu::aboutToShow,this,[this,historyMenu](){
         historyMenu->clear();
-        if(playHistory.isEmpty())
+        if(m_playHistory.isEmpty())
         {
             QAction *emptyAct = historyMenu->addAction("暂无播放历史记录");
             emptyAct->setEnabled(false);
@@ -424,7 +424,7 @@ void Player::createMenus()
         else
         {
             //添加最近播放文件
-            for (const auto &history:playHistory)
+            for (const auto &history:m_playHistory)
             {
                 QString timeStr=history.playTime.toString("yyyy-MM-dd hh::mm");
                 QString text=QString("%1(%2)").arg(history.fileName,timeStr);
@@ -433,7 +433,7 @@ void Player::createMenus()
                     playFile(history.filePath);
                     //恢复上次播放位置
                     QTimer::singleShot(100,this,[this,history](){
-                        mediaPlayer->setPosition(history.lastPostion);
+                        m_mediaPlayer->setPosition(history.lastPostion);
                     });
                 });
             }
@@ -453,8 +453,8 @@ void Player::createMenus()
         recentStreamsMenu->clear();
         for(const QString &url:m_recentStreams){
             recentStreamsMenu->addAction(url,[=](){
-                mediaPlayer->setSource(QUrl(url));
-                mediaPlayer->play();
+                m_mediaPlayer->setSource(QUrl(url));
+                m_mediaPlayer->play();
             });
         }
 
@@ -472,10 +472,40 @@ void Player::createMenus()
     streamMenu->addSeparator();
     streamMenu->addMenu(recentStreamsMenu);
 
+    //二、播放菜单
+    QMenu *playMenu = ui->menubar->addMenu("播放(&P)");
+    m_playbackRateMenu = playMenu->addMenu("播放速度(&R)");
+    QMenu *playModeMenu = playMenu->addMenu("播放模式(&M)");
 
-    //播放菜单
+    QActionGroup *modeGroup = new QActionGroup(this);
+    QStringList modeNames={"顺序播放","列表循环","单曲循环","随机播放"};
 
-    //帮助菜单
+    for(int i = 0;i<modeNames.size();i++)
+    {
+        //QAction *action = new QAction(modeNames[i],this);
+        QAction *action = new QAction(this);
+        action->setCheckable(true);
+        action->setData(i);
+        action->setText(modeNames[i]);
+        modeGroup->addAction(action);
+        playModeMenu->addAction(action);
+
+        if(m_playMode == i)
+        {
+            action->setChecked(true);
+        }
+    }
+
+    connect(modeGroup,&QActionGroup::triggered,this,[this](QAction *action){
+        setPlayMode(static_cast<PlayMode>(action->data().toInt()));
+    });
+
+    ///////////
+
+
+
+
+    //三、帮助菜单
 
 }
 
@@ -507,14 +537,14 @@ void Player::playFile(const QString& filePath)
 {
     if(!filePath.isEmpty())
     {
-        mediaPlayer->setSource(QUrl::fromLocalFile(filePath));
+        m_mediaPlayer->setSource(QUrl::fromLocalFile(filePath));
 
         //恢复上次播放位置
         if(m_lastPositions.contains(filePath))
         {
-            mediaPlayer->setPosition(m_lastPositions[filePath]);
+            m_mediaPlayer->setPosition(m_lastPositions[filePath]);
         }
-        mediaPlayer->play();
+        m_mediaPlayer->play();
 
         setWindowTitle("FrameSync视频播放器 - "+QFileInfo(filePath).fileName());
 
@@ -551,7 +581,7 @@ void Player::clearHistory()
 {
     if(QMessageBox::question(this,"确认","是否要清除所有播放记录？")==QMessageBox::Yes)
     {
-        playHistory.clear();
+        m_playHistory.clear();
         //保存播放历史记录
         savePlayHistory();
     }
@@ -564,14 +594,14 @@ void Player::savePlayHistory()
     {
         QDataStream out(&file);
         out.setVersion(QDataStream::Qt_6_0);
-        out<<qint32(playHistory.size());
+        out<<qint32(m_playHistory.size());
     }
 }
 
 void Player::addToHistory(const QString &filePath)
 {
     //检查是否已经存在
-    auto it= std::find_if(playHistory.begin(),playHistory.end(),
+    auto it= std::find_if(m_playHistory.begin(),m_playHistory.end(),
                            [&filePath](const PlayHistory &h)
                             {return h.filePath == filePath;});
 
@@ -579,10 +609,10 @@ void Player::addToHistory(const QString &filePath)
     history.filePath=filePath;
     history.fileName=QFileInfo(filePath).fileName();
     history.playTime=QDateTime::currentDateTime();
-    history.duration=mediaPlayer->duration();
-    history.lastPostion=mediaPlayer->position();
+    history.duration=m_mediaPlayer->duration();
+    history.lastPostion=m_mediaPlayer->position();
 
-    if(it != playHistory.end())
+    if(it != m_playHistory.end())
     {
         //更新现有记录
         *it=history;
@@ -590,11 +620,11 @@ void Player::addToHistory(const QString &filePath)
     else
     {
         //添加新记录
-        playHistory.prepend(history);
+        m_playHistory.prepend(history);
 
         //限制历史记录数量
-        while (playHistory.size()>30) {
-            playHistory.removeLast();
+        while (m_playHistory.size()>30) {
+            m_playHistory.removeLast();
         }
     }
 
@@ -684,8 +714,8 @@ void Player::openStreamUrl()
         }
 
         //播放流媒体
-        mediaPlayer->setSource(QUrl(url));
-        mediaPlayer->play();
+        m_mediaPlayer->setSource(QUrl(url));
+        m_mediaPlayer->play();
 
         //更新播放器界面
         setWindowTitle("FrameSync视频播放器 - " + url);
@@ -714,3 +744,18 @@ void Player::loadStreamHistory()
         in >> m_recentStreams;
     }
 }
+
+void Player::createPlaybackRateMenu(double rate)
+{
+    if(m_mediaPlayer)
+    {
+        m_mediaPlayer->setPlaybackRate(rate);
+    }
+}
+
+void Player::setPlayMode(PlayMode mode)
+{
+    m_playMode=mode;
+    updatePlayModeIcon();
+}
+
