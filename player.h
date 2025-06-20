@@ -56,6 +56,7 @@ private slots:
     void addToPlaylist();       //添加文件到播放列表
     void removeFromPlaylist();  //从播放列表移除
     void openStreamUrl();       //打开网络流媒体URL
+    void setPlayBackRate(double rate);  //设置播放速率
 
 
 private:
@@ -70,7 +71,7 @@ private:
     enum PlayMode{  //播放模式枚举
         Sequential, //顺序播放
         Loop,       //列表循环
-        SignleLoop, //单曲循环
+        SingleLoop, //单曲循环
         Random      //随机播放
     };
     PlayMode m_playMode;          //当前播放模式
@@ -113,8 +114,9 @@ private:
     QList<QString> m_recentStreams;     //最近播放的流媒体
     QString m_strStreamHistoryFile;     //流媒体历史记录文件路径
     void loadStreamHistory();           //加载流媒体播放历史记录
-    void createPlaybackRateMenu(double rate);      //播放速度控制
+    void createPlaybackRateMenu();      //播放速度控制
     void setPlayMode(PlayMode mode);    //设置播放模式
+    void playNext();                    //播放下一个视频文件
 
 
 };

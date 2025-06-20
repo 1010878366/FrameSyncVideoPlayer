@@ -61,6 +61,9 @@ Player::Player(QWidget *parent)
     //设置窗口标题
     setWindowIcon(QIcon(":/icons/player.svg"));
 
+    //初始化播放模式
+    m_playMode = Sequential;    //顺序播放（默认）
+
     //初始化视频显示组件
     m_videoWidget = new QVideoWidget(this);   //创建视频显示组件
     ui->videoLayout->addWidget(m_videoWidget);    //添加到主界面布局
@@ -215,6 +218,37 @@ Player::Player(QWidget *parent)
     //加载流媒体历史记录
     loadStreamHistory();
 
+    //播放速度控制（创建播放速度菜单）
+    createPlaybackRateMenu();
+
+    //添加错误处理连接
+    connect(m_mediaPlayer,&QMediaPlayer::errorOccurred,this,[this](QMediaPlayer::Error error,const QString &errorString){
+        if(error!=QMediaPlayer::NoError)
+            QMessageBox::warning(this,"播放错误","播放出错，请重试："+errorString);
+    });
+
+    //媒体播放结束时的处理操作
+    connect(m_mediaPlayer,&QMediaPlayer::mediaStatusChanged,this,[this](QMediaPlayer::MediaStatus status){
+        if(status==QMediaPlayer::EndOfMedia)
+            {
+            switch (m_playMode) {
+            case SingleLoop:
+
+                break;
+            case Loop:
+
+                break;
+            case Sequential:
+
+                break;
+            case Random:
+
+                break;
+            default:
+                break;
+            }
+        }
+    });
 }
 
 Player::~Player()
@@ -235,7 +269,7 @@ void Player::updatePlayModeIcon()
         icon = QIcon(QStringLiteral("/icons/loop.svg"));
         tooltip="列表循环";
         break;
-    case SignleLoop:
+    case SingleLoop:
         icon = QIcon(QStringLiteral("/icons/signal-loop.svg"));
         tooltip="单曲循环";
         break;
@@ -484,8 +518,9 @@ void Player::createMenus()
     {
         //QAction *action = new QAction(modeNames[i],this);
         QAction *action = new QAction(this);
-        action->setCheckable(true);
         action->setData(i);
+
+        action->setCheckable(true);
         action->setText(modeNames[i]);
         modeGroup->addAction(action);
         playModeMenu->addAction(action);
@@ -745,11 +780,30 @@ void Player::loadStreamHistory()
     }
 }
 
-void Player::createPlaybackRateMenu(double rate)
+void Player::createPlaybackRateMenu()
 {
-    if(m_mediaPlayer)
+    if(!m_playbackRateMenu)
+        return;
+    m_rateGroup = new QActionGroup(this);
+    QList<double> rates = {0.5,0.75,1.0,1.25,1.5,2.0};
+    QList<QString> ratesTexts = {"0.5x","0.75x","1.0x(正常)","1.25x","1.5x","2.0x"};
+
+    for(int i=0; i < rates.size();i++)
     {
-        m_mediaPlayer->setPlaybackRate(rate);
+        //QAction *rateAct = new QAction(ratesTexts[i],this);
+        QAction *rateAct = new QAction(this);
+        rateAct->setText(ratesTexts[i]);
+        rateAct->setData(rates[i]);
+
+        rateAct->setCheckable(true);
+
+        if(qFuzzyCompare(rates[i],1.0))
+        {
+            rateAct->setChecked(true);
+        }
+
+        m_rateGroup->addAction(rateAct);
+        m_playbackRateMenu->addAction(rateAct);
     }
 }
 
@@ -759,3 +813,26 @@ void Player::setPlayMode(PlayMode mode)
     updatePlayModeIcon();
 }
 
+void Player::setPlayBackRate(double rate)
+{
+    if(m_mediaPlayer)
+    {
+        m_mediaPlayer->setPlaybackRate(rate);
+    }
+}
+
+void Player::playNext()
+{
+    if(m_playlistWidget->count()>0)
+    {
+        int nNextRow = m_playlistWidget->currentRow()+1;
+        if(nNextRow>=m_playlistWidget->count())
+            nNextRow=m_playMode==Loop?0:-1;
+
+        if(nNextRow>=0)
+        {
+            m_playlistWidget->setCurrentRow(nNextRow);
+            playFile(m_playlistWidget->currentItem()->data(Qt::UserRole).toString());
+        }
+    }
+}
