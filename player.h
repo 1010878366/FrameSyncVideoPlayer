@@ -25,6 +25,7 @@
 #include<QTimer>
 #include<QInputDialog>
 #include<QMessageBox>
+#include<QVector>
 
 #include"ClickableSlider.h"
 

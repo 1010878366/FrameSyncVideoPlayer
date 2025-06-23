@@ -782,29 +782,44 @@ void Player::loadStreamHistory()
 
 void Player::createPlaybackRateMenu()
 {
-    if(!m_playbackRateMenu)
-        return;
+    if(!m_playbackRateMenu) return;
+
     m_rateGroup = new QActionGroup(this);
-    QList<double> rates = {0.5,0.75,1.0,1.25,1.5,2.0};
-    QList<QString> ratesTexts = {"0.5x","0.75x","1.0x(正常)","1.25x","1.5x","2.0x"};
 
-    for(int i=0; i < rates.size();i++)
-    {
-        //QAction *rateAct = new QAction(ratesTexts[i],this);
-        QAction *rateAct = new QAction(this);
-        rateAct->setText(ratesTexts[i]);
-        rateAct->setData(rates[i]);
+    // 定义局部结构体（仅在函数内可见）
+    struct RateOption {
+        QString displayText;
+        double rateValue;
+    };
 
+    // 使用结构体初始化向量
+    QVector<RateOption> rateOptions = {
+        {"0.5x", 0.5},
+        {"0.75x", 0.75},
+        {"1.0x(正常)", 1.0},  // 恢复"正常"标注
+        {"1.25x", 1.25},
+        {"1.5x", 1.5},
+        {"2.0x", 2.0}
+    };
+
+    // 使用基于范围的for循环（更清晰）
+    for (const auto& option : rateOptions) {
+        QAction* rateAct = new QAction(option.displayText, this);
+        rateAct->setData(option.rateValue);
         rateAct->setCheckable(true);
 
-        if(qFuzzyCompare(rates[i],1.0))
-        {
+        // 默认选中1.0x
+        if (qFuzzyCompare(option.rateValue, 1.0)) {
             rateAct->setChecked(true);
         }
 
         m_rateGroup->addAction(rateAct);
         m_playbackRateMenu->addAction(rateAct);
     }
+
+    connect(m_rateGroup, &QActionGroup::triggered, this, [this](QAction* action) {
+        setPlayBackRate(action->data().toDouble());
+    });
 }
 
 void Player::setPlayMode(PlayMode mode)
